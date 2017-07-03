@@ -24,7 +24,7 @@
 __version__ = '2.1.1'
 VERSION = tuple(map(int, __version__.split('.')))
 
-__all__ = ('Munch', 'munchify', 'UMunch', 'undefined', 'unmunchify')
+__all__ = ('Munch', 'munchify', 'DefaultMunch', 'unmunchify')
 
 from .python3_compat import *   # pylint: disable=wildcard-import
 
@@ -203,44 +203,42 @@ class Munch(dict):
         return type(self).fromDict(super(Munch, self).copy())
 
 
-class UMunch(Munch):
+class DefaultMunch(Munch):
     """
-    A Munch that returns `undefined` for missing keys.
+    A Munch that returns a user-specified value for missing keys.
     """
+
+    def __init__(self, *args, **kwargs):
+        """ Construct a new DefaultMunch. Like collections.defaultdict, the
+            first argument is the default value; subsequent arguments are the
+            same as those for dict.
+        """
+        # Mimic collections.defaultdict constructor
+        if args:
+            default = args[0]
+            args = args[1:]
+        else:
+            default = None
+        super(DefaultMunch, self).__init__(*args, **kwargs)
+        self.__default__ = default
 
     def __getattr__(self, k):
+        """ Gets key if it exists, otherwise returns the default value."""
         try:
-            return super(UMunch, self).__getattr__(k)
+            return super(DefaultMunch, self).__getattr__(k)
         except AttributeError:
-            return undefined
+            return self.__default__
 
+    def __getitem__(self, k):
+        """ Gets key if it exists, otherwise returns the default value."""
+        try:
+            return super(DefaultMunch, self).__getitem__(k)
+        except KeyError:
+            return self.__default__
 
-class Undefined:
-    """
-    Behaves similarly to JavaScript's `undefined`:
-
-    bool(undefined) -> False
-    undefined == None -> True
-    undefined == undefined -> True
-    undefined is None -> False
-    undefined is undefined -> True
-    """
-
-    def __eq__(self, other):
-        if isinstance(other, Undefined):
-            return True
-        if other is None:
-            return True
-        return False
-
-    def __bool__(self):
-        return False
-
-    def __repr__(self):
-        return 'undefined'
-
-
-undefined = Undefined()
+    @classmethod
+    def fromDict(cls, d, default=None):
+        return munchify(d, factory=lambda d_: cls(default, d_))
 
 
 # While we could convert abstract types like Mapping or Iterable, I think

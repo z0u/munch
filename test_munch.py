@@ -1,6 +1,6 @@
 import json
 import pytest
-from munch import Munch, munchify, unmunchify, UMunch, undefined
+from munch import DefaultMunch, Munch, munchify, unmunchify
 
 
 def test_base():
@@ -173,16 +173,10 @@ def test_reserved_attributes(attrname):
         assert callable(attr)
 
 
-def test_undefined():
-    assert undefined == None
-    assert undefined == undefined
-    assert undefined is undefined
-    assert undefined is not None
-
-
-def test_getattr_udef():
-    b = UMunch(bar='baz', lol={})
-    b.foo
+def test_getattr_default():
+    b = DefaultMunch(bar='baz', lol={})
+    assert b.foo is None
+    assert b['foo'] is None
 
     assert b.bar == 'baz'
     assert getattr(b, 'bar') == 'baz'
@@ -190,29 +184,41 @@ def test_getattr_udef():
     assert b.lol is b['lol']
     assert b.lol is getattr(b, 'lol')
 
+    undefined = object()
+    b = DefaultMunch(undefined, bar='baz', lol={})
+    assert b.foo is undefined
+    assert b['foo'] is undefined
 
-def test_setattr_udef():
-    b = UMunch(foo='bar', this_is='useful when subclassing')
+
+def test_setattr_default():
+    b = DefaultMunch(foo='bar', this_is='useful when subclassing')
     assert hasattr(b.values, '__call__')
 
     b.values = 'uh oh'
     assert b.values == 'uh oh'
-
-    with pytest.raises(KeyError):
-        b['values']
+    assert b['values'] is None
 
 
-def test_delattr_udef():
-    b = UMunch(lol=42)
+def test_delattr_default():
+    b = DefaultMunch(lol=42)
     del b.lol
 
-    assert b.lol is undefined
-    with pytest.raises(KeyError):
-        b['lol']
+    assert b.lol is None
+    assert b['lol'] is None
 
 
-def test_munchify_udef():
-    b = munchify({'urmom': {'sez': {'what': 'what'}}}, UMunch)
+def test_fromDict_default():
+    undefined = object()
+    b = DefaultMunch.fromDict({'urmom': {'sez': {'what': 'what'}}}, undefined)
+    assert b.urmom.sez.what == 'what'
+    assert b.urmom.sez.foo is undefined
+
+
+def test_munchify_default():
+    undefined = object()
+    b = munchify(
+        {'urmom': {'sez': {'what': 'what'}}},
+        lambda d: DefaultMunch(undefined, d))
     assert b.urmom.sez.what == 'what'
     assert b.urdad is undefined
     assert b.urmom.sez.ni is undefined
