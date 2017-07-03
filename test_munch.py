@@ -111,7 +111,11 @@ def test_fromDict():
 def test_copy():
     m = Munch(urmom=Munch(sez=Munch(what='what')))
     c = m.copy()
+    assert c is not m
+    assert c.urmom is not m.urmom
+    assert c.urmom.sez is not m.urmom.sez
     assert c.urmom.sez.what == 'what'
+    assert c == m
 
 
 def test_munchify():
@@ -198,6 +202,9 @@ def test_setattr_default():
     assert b.values == 'uh oh'
     assert b['values'] is None
 
+    assert b.__default__ is None
+    assert '__default__' not in b
+
 
 def test_delattr_default():
     b = DefaultMunch(lol=42)
@@ -212,6 +219,19 @@ def test_fromDict_default():
     b = DefaultMunch.fromDict({'urmom': {'sez': {'what': 'what'}}}, undefined)
     assert b.urmom.sez.what == 'what'
     assert b.urmom.sez.foo is undefined
+
+
+def test_copy_default():
+    undefined = object()
+    m = DefaultMunch.fromDict({'urmom': {'sez': {'what': 'what'}}}, undefined)
+    c = m.copy()
+    assert c is not m
+    assert c.urmom is not m.urmom
+    assert c.urmom.sez is not m.urmom.sez
+    assert c.urmom.sez.what == 'what'
+    assert c == m
+    assert c.urmom.sez.foo is undefined
+    assert c.urmom.sez.__undefined__ is undefined
 
 
 def test_munchify_default():

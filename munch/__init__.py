@@ -200,7 +200,7 @@ class Munch(dict):
         return munchify(d, cls)
 
     def copy(self):
-        return type(self).fromDict(super(Munch, self).copy())
+        return Munch.fromDict(self)
 
 
 class DefaultMunch(Munch):
@@ -229,6 +229,12 @@ class DefaultMunch(Munch):
         except AttributeError:
             return self.__default__
 
+    def __setattr__(self, k, v):
+        if k == '__default__':
+            object.__setattr__(self, k, v)
+        else:
+            return super(DefaultMunch, self).__setattr__(k, v)
+
     def __getitem__(self, k):
         """ Gets key if it exists, otherwise returns the default value."""
         try:
@@ -239,6 +245,13 @@ class DefaultMunch(Munch):
     @classmethod
     def fromDict(cls, d, default=None):
         return munchify(d, factory=lambda d_: cls(default, d_))
+
+    def copy(self):
+        return DefaultMunch.fromDict(self, default=self.__default__)
+
+    def __repr__(self):
+        return '%s(%r, %s)' % (
+            type(self).__name__, self.__undefined__, dict.__repr__(self))
 
 
 # While we could convert abstract types like Mapping or Iterable, I think
